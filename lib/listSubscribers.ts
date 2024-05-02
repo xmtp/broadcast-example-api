@@ -1,13 +1,6 @@
-import { xmtpClient } from "./client";
+import type { Client } from "@xmtp/xmtp-js";
 
-interface Subscriber {
-  address: string;
-  canMessage: boolean;
-}
-
-export const listSubscribers = async (): Promise<Subscriber[]> => {
-  const client = await xmtpClient;
-
-  return [];
-  // subscribers: conversation.subscribers,
+export const listSubscribers = async (client: Client): Promise<string[]> => {
+  const conversations = await client.conversations.listFromCache();
+  return conversations.map((conversation) => conversation.peerAddress);
 };

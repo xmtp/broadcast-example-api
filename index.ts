@@ -1,7 +1,12 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { xmtpClient } from "./lib/client";
+import { getXmtpClient } from "./lib/client";
+import { listSubscribers } from "./lib/listSubscribers";
+import { invitation } from "@xmtp/proto";
+import { startBroadcast } from "./lib/startBroadcast";
+import { addBroadcast } from "./lib/broadcasts";
+import { broadCastConfigEntities } from "./lib/broadcasterConfigs";
 
 const envPath = `.env.${process.env.NODE_ENV}`;
 dotenv.config({ path: envPath });
@@ -11,20 +16,28 @@ app.use(express.json());
 app.use(cors());
 
 app.post("/lookup", async (req: Request, res: Response) => {
-  const { address } = req.body;
+  const { address, broadcastAddress } = req.body;
   console.log(req.body);
   if (typeof address !== "string") {
     console.log(req.body);
     res.status(400).send("Address must be a string");
     return;
   }
-  const client = await xmtpClient;
+  if (typeof broadcastAddress !== "string") {
+    res.status(400).send("Broadcast Address must be a string");
+    return;
+  }
+  const client = getXmtpClient(broadcastAddress);
+  if (!client) {
+    res.status(500).send("Client not initialized");
+    return;
+  }
   const canMessage = await client.canMessage(address);
   res.json({ onNetwork: canMessage }).status(200);
 });
 
 app.post("/subscribe", async (req: Request, res: Response) => {
-  const { address, signature } = req.body;
+  const { address, signature, timestamp, broadcastAddress } = req.body;
   if (typeof address !== "string") {
     res.status(400).send("Address must be a string");
     return;
@@ -34,11 +47,40 @@ app.post("/subscribe", async (req: Request, res: Response) => {
     res.status(400).send("Signature must be a string");
     return;
   }
+  if (typeof timestamp !== "number") {
+    res.status(400).send("Timestamp must be a number");
+    return;
+  }
+  if (typeof broadcastAddress !== "string") {
+    res.status(400).send("Broadcast Address must be a string");
+    return;
+  }
+
   try {
-    const client = await xmtpClient;
-    // TODO: Set Signature on new conversation
-    const conversation = await client.conversations.newConversation(address);
-    await conversation.send("Welcome to Good Morning!");
+    const client = getXmtpClient(broadcastAddress);
+    const { greeting } = broadCastConfigEntities.map[broadcastAddress];
+    if (!client) {
+      res.status(500).send("Client not initialized");
+      return;
+    }
+    const consentProof = invitation.ConsentProofPayload.fromPartial({
+      signature,
+      timestamp: timestamp,
+      payloadVersion:
+        invitation.ConsentProofPayloadVersion.CONSENT_PROOF_PAYLOAD_VERSION_1,
+    });
+    console.log("Creating conversation with: ", {
+      address,
+      signature,
+      timestamp,
+    });
+    const conversation = await client.conversations.newConversation(
+      address,
+      undefined,
+      consentProof
+    );
+    console.log("Conversation created: ", conversation.topic);
+    await conversation.send(greeting);
     res.status(200).send({ topic: conversation.topic });
   } catch (err) {
     console.error(err);
@@ -46,21 +88,28 @@ app.post("/subscribe", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/subscriptions", async (req: Request, res: Response) => {});
-
 app.post("/broadcast", async (req: Request, res: Response) => {
-  const { message } = req.body;
+  const { text, address } = req.body;
   // Supporting sending only Text Content, but can be updated to send different types of content
-  if (typeof message !== "string") {
+  if (typeof text !== "string") {
     res.status(400).send("Message must be a string");
     return;
   }
-  const client = await xmtpClient;
-  const conversations = await client.conversations.list();
-  for (const conversation of conversations) {
-    await conversation.send(message);
+  if (typeof address !== "string") {
+    res.status(400).send("Address must be a string");
+    return;
   }
-  res.status(200).send("Broadcasted message to all conversations");
+  const client = getXmtpClient(address);
+  if (!client) {
+    res.status(500).send("Client not initialized");
+    return;
+  }
+
+  const subscribers = await listSubscribers(client);
+  const broadcastId = addBroadcast(subscribers, text);
+  startBroadcast(client, subscribers, text, broadcastId);
+
+  res.status(200).send({ broadcastId });
 });
 
 app.listen(PORT, () => {
