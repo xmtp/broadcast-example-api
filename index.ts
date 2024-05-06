@@ -19,6 +19,10 @@ app.use(
   })
 );
 
+app.get("/_health", (req: Request, res: Response) => {
+  res.status(200).send("OK");
+});
+
 app.post("/lookup", async (req: Request, res: Response) => {
   const { address, broadcastAddress } = req.body;
   console.log(req.body);
