@@ -1,7 +1,7 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { getXmtpClient } from "./lib/client";
+import { getXmtpClient, initializeClients } from "./lib/client";
 import { listSubscribers } from "./lib/listSubscribers";
 import { invitation } from "@xmtp/proto";
 import { startBroadcast } from "./lib/startBroadcast";
@@ -18,6 +18,8 @@ app.use(
     origin: "https://subscribe-broadcast.vercel.app",
   })
 );
+
+initializeClients();
 
 app.get("/_health", (req: Request, res: Response) => {
   res.status(200).send("OK");

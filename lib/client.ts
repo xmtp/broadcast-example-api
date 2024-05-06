@@ -6,10 +6,11 @@ import { base64ToBytes } from "./utils/base64ToBytes";
 
 let clientsInitialized = false;
 const clients = new Map<string, Client>();
+// Work around for some weirdness when deploying, could be solved by removing grpc though
 export async function initializeClients() {
   clientsInitialized = true;
   return Promise.all(
-    broadCastConfigEntities.addresses.map((address) => {
+    broadCastConfigEntities.addresses.map(async (address) => {
       console.log("Initializing client for: ", address);
       const config = broadCastConfigEntities.map[address];
       const keyBundle = process.env[`${config.id}_KEY_BUNDLE`];
@@ -23,21 +24,20 @@ export async function initializeClients() {
         return;
       }
       console.log("About to initialize client for: ", address);
-      Client.create(null, {
-        privateKeyOverride: base64ToBytes(keyBundle),
-        // apiClientFactory: GrpcApiClient.fromOptions,
-        basePersistence: new FsPersistence(filePath),
-        env: (process.env.XMTP_ENV as XmtpEnv) ?? "dev",
-      })
-        .then((client) => {
-          console.log(
-            `Client initialized at: ${client.address} for ${config.id}`
-          );
-          clients.set(config.address, client);
-        })
-        .catch((err) => {
-          console.log(err);
+      try {
+        const client = await Client.create(null, {
+          privateKeyOverride: base64ToBytes(keyBundle),
+          // apiClientFactory: GrpcApiClient.fromOptions,
+          basePersistence: new FsPersistence(filePath),
+          env: (process.env.XMTP_ENV as XmtpEnv) ?? "dev",
         });
+        console.log(
+          `Client initialized at: ${client.address} for ${config.id}`
+        );
+        clients.set(config.address, client);
+      } catch (err) {
+        console.log(err);
+      }
     })
   );
 }
