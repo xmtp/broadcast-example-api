@@ -13,7 +13,11 @@ dotenv.config({ path: envPath });
 const PORT = process.env.PORT;
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://subscribe-broadcast.vercel.app",
+  })
+);
 
 app.post("/lookup", async (req: Request, res: Response) => {
   const { address, broadcastAddress } = req.body;
