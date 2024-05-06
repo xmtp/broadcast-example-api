@@ -1,5 +1,5 @@
 import { Client, type XmtpEnv } from "@xmtp/xmtp-js";
-import { GrpcApiClient } from "@xmtp/grpc-api-client";
+// import { GrpcApiClient } from "@xmtp/grpc-api-client";
 import { FsPersistence } from "@xmtp/fs-persistence";
 import { broadCastConfigEntities } from "./broadcasterConfigs";
 import { base64ToBytes } from "./utils/base64ToBytes";
@@ -25,7 +25,7 @@ export async function initializeClients() {
       console.log("About to initialize client for: ", address);
       Client.create(null, {
         privateKeyOverride: base64ToBytes(keyBundle),
-        apiClientFactory: GrpcApiClient.fromOptions,
+        // apiClientFactory: GrpcApiClient.fromOptions,
         basePersistence: new FsPersistence(filePath),
         env: (process.env.XMTP_ENV as XmtpEnv) ?? "dev",
       })
