@@ -6,6 +6,7 @@ import { base64ToBytes } from "./utils/base64ToBytes";
 
 const clients = new Map<string, Client>();
 for (const address of broadCastConfigEntities.addresses) {
+  console.log("Initializing client for: ", address);
   const config = broadCastConfigEntities.map[address];
   const keyBundle = process.env[`${config.id}_KEY_BUNDLE`];
   const filePath = process.env[`${config.id}_FILE_PERSISTENCE_PATH`];
@@ -17,11 +18,11 @@ for (const address of broadCastConfigEntities.addresses) {
     console.error(`Missing ${config.id}_FILE_PERSISTENCE_PATH`);
     continue;
   }
-
+  console.log("About to initialize client for: ", address);
   Client.create(null, {
     privateKeyOverride: base64ToBytes(keyBundle),
     apiClientFactory: GrpcApiClient.fromOptions,
-    basePersistence: new FsPersistence(filePath),
+    // basePersistence: new FsPersistence(filePath),
     env: (process.env.XMTP_ENV as XmtpEnv) ?? "dev",
   })
     .then((client) => {
@@ -29,7 +30,7 @@ for (const address of broadCastConfigEntities.addresses) {
       clients.set(config.address, client);
     })
     .catch((err) => {
-      console.error(err);
+      console.log(err);
     });
 }
 

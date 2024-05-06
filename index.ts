@@ -37,7 +37,8 @@ app.post("/lookup", async (req: Request, res: Response) => {
   }
   const client = getXmtpClient(broadcastAddress);
   if (!client) {
-    res.status(500).send("Client not initialized");
+    console.log("Client not initialized " + broadcastAddress);
+    res.status(500).send("Client not initialized " + broadcastAddress);
     return;
   }
   const canMessage = await client.canMessage(address);
