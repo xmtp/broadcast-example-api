@@ -35,7 +35,7 @@ app.post("/lookup", async (req: Request, res: Response) => {
     res.status(400).send("Broadcast Address must be a string");
     return;
   }
-  const client = getXmtpClient(broadcastAddress);
+  const client = await getXmtpClient(broadcastAddress);
   if (!client) {
     console.log("Client not initialized " + broadcastAddress);
     res.status(500).send("Client not initialized " + broadcastAddress);
@@ -66,7 +66,7 @@ app.post("/subscribe", async (req: Request, res: Response) => {
   }
 
   try {
-    const client = getXmtpClient(broadcastAddress);
+    const client = await getXmtpClient(broadcastAddress);
     const { greeting } = broadCastConfigEntities.map[broadcastAddress];
     if (!client) {
       res.status(500).send("Client not initialized");
@@ -108,7 +108,7 @@ app.post("/broadcast", async (req: Request, res: Response) => {
     res.status(400).send("Address must be a string");
     return;
   }
-  const client = getXmtpClient(address);
+  const client = await getXmtpClient(address);
   if (!client) {
     res.status(500).send("Client not initialized");
     return;
