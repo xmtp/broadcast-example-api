@@ -59,6 +59,12 @@ app.post("/subscribe", async (req: Request, res: Response) => {
     res.status(400).send("Broadcast Address must be a string");
     return;
   }
+
+  if (typeof consentProof !== "string") {
+    res.status(400).send("Consent proof must be a string");
+    return;
+  }
+
   // Convert consentProof from Base64 to Uint8Array
   const consentProofUint8Array = base64ToBytes(consentProof);
 
