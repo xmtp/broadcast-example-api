@@ -49,21 +49,12 @@ app.post("/lookup", async (req: Request, res: Response) => {
 });
 
 app.post("/subscribe", async (req: Request, res: Response) => {
-  const { address, signature, timestamp, broadcastAddress, consentProof } =
-    req.body;
+  const { address, broadcastAddress, consentProof } = req.body;
   if (typeof address !== "string") {
     res.status(400).send("Address must be a string");
     return;
   }
 
-  if (typeof signature !== "string") {
-    res.status(400).send("Signature must be a string");
-    return;
-  }
-  if (typeof timestamp !== "number") {
-    res.status(400).send("Timestamp must be a number");
-    return;
-  }
   if (typeof broadcastAddress !== "string") {
     res.status(400).send("Broadcast Address must be a string");
     return;
