@@ -7,6 +7,7 @@ import { invitation } from "@xmtp/proto";
 import { startBroadcast } from "./lib/startBroadcast";
 import { addBroadcast } from "./lib/broadcasts";
 import { broadCastConfigEntities } from "./lib/broadcasterConfigs";
+import { base64ToBytes } from "./lib/utils/base64ToBytes";
 
 const envPath = `.env.${process.env.NODE_ENV}`;
 dotenv.config({ path: envPath });
@@ -15,7 +16,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "https://subscribe-broadcast.vercel.app",
+    origin: process.env.UI_ORIGIN ?? "https://subscribe-broadcast.vercel.app",
   })
 );
 
@@ -48,7 +49,8 @@ app.post("/lookup", async (req: Request, res: Response) => {
 });
 
 app.post("/subscribe", async (req: Request, res: Response) => {
-  const { address, signature, timestamp, broadcastAddress } = req.body;
+  const { address, signature, timestamp, broadcastAddress, consentProof } =
+    req.body;
   if (typeof address !== "string") {
     res.status(400).send("Address must be a string");
     return;
@@ -66,6 +68,8 @@ app.post("/subscribe", async (req: Request, res: Response) => {
     res.status(400).send("Broadcast Address must be a string");
     return;
   }
+  // Convert consentProof from Base64 to Uint8Array
+  const consentProofUint8Array = base64ToBytes(consentProof);
 
   try {
     const client = await getXmtpClient(broadcastAddress);
@@ -74,16 +78,11 @@ app.post("/subscribe", async (req: Request, res: Response) => {
       res.status(500).send("Client not initialized");
       return;
     }
-    const consentProof = invitation.ConsentProofPayload.fromPartial({
-      signature,
-      timestamp: timestamp,
-      payloadVersion:
-        invitation.ConsentProofPayloadVersion.CONSENT_PROOF_PAYLOAD_VERSION_1,
-    });
+    const consentProof = invitation.ConsentProofPayload.decode(
+      consentProofUint8Array
+    );
     console.log("Creating conversation with: ", {
-      address,
-      signature,
-      timestamp,
+      consentProof,
     });
     const conversation = await client.conversations.newConversation(
       address,
