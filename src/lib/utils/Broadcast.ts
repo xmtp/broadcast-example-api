@@ -198,7 +198,7 @@ export class Broadcast {
         batchCount += 2;
       }
       //       if (batchCount >= this.rateLimitAmount / 2) { keeping this commented for now, will uncomment/remove after testing
-      if (batchCount >= this.rateLimitAmount / 2) {
+      if (batchCount >= this.rateLimitAmount) {
         batches.push(batch);
         batch = [];
         batchCount = 0;
