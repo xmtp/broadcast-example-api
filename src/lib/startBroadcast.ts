@@ -62,6 +62,7 @@ export const startBroadcast = async (
     client,
     addresses: broadcastAddresses,
     cachedCanMessageAddresses: [],
+    messages: [message],
     rateLimitAmount: Number(
       process.env[`${broadcastConfigId}_RATE_LIMIT_AMOUNT`] ?? XMTP_RATE_LIMIT
     ),
@@ -80,7 +81,7 @@ export const startBroadcast = async (
     onDelay,
   });
   try {
-    await broadcast.broadcast({ message });
+    await broadcast.broadcast();
   } catch (err) {
     console.error(`Error broadcasting: ${err}`);
     updateBroadcastStatus(broadcastId, "failed");

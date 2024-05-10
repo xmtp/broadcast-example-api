@@ -1,9 +1,14 @@
 import { type Conversation, type Client } from "@xmtp/xmtp-js";
 
+type MessageType = string;
+// TODO: Update to handle any content type
+type MessagesType = MessageType[];
+
 interface BroadcastOptions {
   client: Client;
   addresses: string[];
   cachedCanMessageAddresses: string[];
+  messages: MessagesType;
   rateLimitAmount?: number;
   rateLimitTime?: number;
 
@@ -30,6 +35,7 @@ export class Broadcast {
   batches: string[][] = [];
   errorBatch: string[] = [];
   conversationMapping: Map<string, Conversation> = new Map();
+  messages: MessagesType = [];
 
   // Callbacks
   onBatchStart?: (addresses: string[]) => void;
@@ -46,6 +52,7 @@ export class Broadcast {
     client,
     addresses,
     cachedCanMessageAddresses,
+    messages,
     rateLimitAmount = 1000,
     rateLimitTime = 1000 * 60 * 5,
     onBatchStart,
@@ -61,6 +68,7 @@ export class Broadcast {
     this.client = client;
     this.addresses = addresses;
     this.cachedCanMessageAddresses = new Set(cachedCanMessageAddresses);
+    this.messages = messages;
     this.rateLimitAmount = rateLimitAmount;
     this.rateLimitTime = rateLimitTime;
     this.onBatchStart = onBatchStart;
@@ -74,7 +82,8 @@ export class Broadcast {
     this.onDelay = onDelay;
   }
 
-  public broadcast = async ({ message }: { message: string }) => {
+  // TODO: Update Types to handle any content type
+  public broadcast = async () => {
     const conversations = await this.client.conversations.list();
     for (const conversation of conversations) {
       this.conversationMapping.set(conversation.peerAddress, conversation);
@@ -88,24 +97,17 @@ export class Broadcast {
     for (let batchIndex = 0; batchIndex < this.batches.length; batchIndex++) {
       await this.handleBatch({
         addresses: this.batches[batchIndex],
-        message: message,
       });
       if (batchIndex !== this.batches.length - 1) {
         await this.delay(this.rateLimitTime);
       } else {
-        await this.sendErrorBatch(message);
+        await this.sendErrorBatch();
       }
     }
     this.onBroadcastComplete?.();
   };
 
-  private handleBatch = async ({
-    addresses,
-    message,
-  }: {
-    addresses: string[];
-    message: string;
-  }) => {
+  private handleBatch = async ({ addresses }: { addresses: string[] }) => {
     this.onBatchStart?.(addresses);
     await this.canMessageAddresses(addresses, this.onCanMessageAddressesUpdate);
     for (const address of addresses) {
@@ -121,7 +123,9 @@ export class Broadcast {
           );
           this.conversationMapping.set(address, conversation);
         }
-        await conversation.send(message);
+        for (const message of this.messages) {
+          await conversation.send(message);
+        }
         this.onMessageSent?.(address);
       } catch (err) {
         this.onMessageFailed?.(address);
@@ -132,7 +136,7 @@ export class Broadcast {
     this.onBatchComplete?.(addresses);
   };
 
-  private sendErrorBatch = async (message: string) => {
+  private sendErrorBatch = async () => {
     if (this.errorBatch.length === 0) {
       return;
     }
@@ -142,7 +146,9 @@ export class Broadcast {
         const conversation = await this.client.conversations.newConversation(
           address
         );
-        await conversation.send(message);
+        for (const message of this.messages) {
+          await conversation.send(message);
+        }
         this.onMessageSent?.(address);
       } catch (err) {
         this.onMessageFailed?.(address);
@@ -186,22 +192,31 @@ export class Broadcast {
     const batches: string[][] = [];
     let batchCount = 0;
     for (const address of this.addresses) {
-      // No matter what we will want to send a message so this is 1 count
-      // If sending multiple messages like a broadcast with text and image will need to add more
-      batchCount++;
-      batch.push(address);
+      let addressWeight = 0;
+      // No matter what we will want to send a message so this is the number of messages being sent
+      addressWeight += this.messages.length;
       if (!this.conversationMapping.has(address)) {
         // this conversation will likely need to be created
-        // so we count it as 2
-        // 1 for getUserContactFromNetwork
-        // 1 for post to network
-        batchCount += 2;
+        // so we count it as 3 Posts
+        // 1. create user invite
+        // 2. create peer invite
+        // 3. allow contact
+        addressWeight += 3;
       }
-      //       if (batchCount >= this.rateLimitAmount / 2) { keeping this commented for now, will uncomment/remove after testing
-      if (batchCount >= this.rateLimitAmount) {
+      const newBatchCount = batchCount + addressWeight;
+      if (newBatchCount === this.rateLimitAmount) {
+        batch.push(address);
         batches.push(batch);
         batch = [];
         batchCount = 0;
+      } else if (newBatchCount > this.rateLimitAmount) {
+        batches.push(batch);
+        batch = [];
+        batch.push(address);
+        batchCount = addressWeight;
+      } else {
+        batch.push(address);
+        batchCount = newBatchCount;
       }
     }
     if (batch.length > 0) {
