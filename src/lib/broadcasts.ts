@@ -1,8 +1,8 @@
 interface Broadcast {
   id: string;
   message: string;
-  recipients: string[];
-  sent: string[];
+  recipients: number;
+  sent: number;
   startTime: string;
   endTime?: string;
   status: "sending" | "waiting" | "completed" | "failed";
@@ -33,8 +33,8 @@ export const addBroadcast = (recipients: string[], message: string): string => {
   const broadcast: Broadcast = {
     id,
     message,
-    recipients,
-    sent: [],
+    recipients: recipients.length,
+    sent: 0,
     startTime: new Date().toISOString(),
     status: "sending",
   };
@@ -44,9 +44,12 @@ export const addBroadcast = (recipients: string[], message: string): string => {
   return id;
 };
 
-export const updateBroadcastFromBatch = (id: string, batch: string[]): void => {
+export const incrementBroadcastSent = (id: string): void => {
   const broadcast = broadcastEntities.entities[id];
-  broadcast.sent.push(...batch);
+  const count = broadcast.sent + 1;
+  const total = broadcast.recipients;
+  broadcastEntities.entities[id].sent = broadcast.sent + 1;
+  console.log(`Message sent for broadcast ${id} ${count}/${total}`);
 };
 
 export const updateBroadcastStatus = (

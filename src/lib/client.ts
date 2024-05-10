@@ -1,8 +1,14 @@
 import { Client, type XmtpEnv } from "@xmtp/xmtp-js";
 import { GrpcApiClient } from "@xmtp/grpc-api-client";
-import { FsPersistence } from "@xmtp/fs-persistence";
+import { RedisPersistence } from "@xmtp/redis-persistence";
+import { createClient } from "@redis/client";
 import { broadCastConfigEntities } from "./broadcasterConfigs";
 import { base64ToBytes } from "./utils/base64ToBytes";
+
+const redis = createClient({
+  url: process.env.REDIS_URL,
+});
+redis.connect();
 
 let clientsInitialized = false;
 const clients = new Map<string, Client>();
@@ -23,12 +29,11 @@ export async function initializeClients() {
         console.error(`Missing ${config.id}_FILE_PERSISTENCE_PATH`);
         return;
       }
-      console.log("About to initialize client for: ", address);
       try {
         const client = await Client.create(null, {
           privateKeyOverride: base64ToBytes(keyBundle),
           apiClientFactory: GrpcApiClient.fromOptions as any,
-          basePersistence: new FsPersistence(filePath),
+          basePersistence: new RedisPersistence(redis as any, "xmtp:"),
           env: (process.env.XMTP_ENV as XmtpEnv) ?? "dev",
         });
         console.log(

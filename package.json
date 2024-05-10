@@ -17,9 +17,11 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@redis/client": "^1.5.14",
     "@xmtp/fs-persistence": "^0.0.4",
     "@xmtp/grpc-api-client": "^0.2.4",
     "@xmtp/proto": "^3.55.0",
+    "@xmtp/redis-persistence": "^0.0.4",
     "@xmtp/xmtp-js": "11.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

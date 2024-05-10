@@ -2,12 +2,12 @@ import express, { type Request, type Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { getXmtpClient, initializeClients } from "./lib/client";
-import { listSubscribers } from "./lib/listSubscribers";
 import { invitation } from "@xmtp/proto";
 import { startBroadcast } from "./lib/startBroadcast";
-import { addBroadcast } from "./lib/broadcasts";
+import { addBroadcast, broadcastEntities } from "./lib/broadcasts";
 import { broadCastConfigEntities } from "./lib/broadcasterConfigs";
 import { base64ToBytes } from "./lib/utils/base64ToBytes";
+import { getDevWalletAddresses } from "./lib/addresses";
 
 const envPath = `.env.${process.env.NODE_ENV}`;
 dotenv.config({ path: envPath });
@@ -111,12 +111,28 @@ app.post("/broadcast", async (req: Request, res: Response) => {
     res.status(500).send("Client not initialized");
     return;
   }
-
-  const subscribers = await listSubscribers(client);
+  const subscribers = getDevWalletAddresses();
   const broadcastId = addBroadcast(subscribers, text);
   startBroadcast(client, subscribers, text, broadcastId);
 
   res.status(200).send({ broadcastId });
+});
+
+app.get("/broadcast", async (req: Request, res: Response) => {
+  // Get broadcast id from params
+  const { broadcastId } = req.query;
+  console.log(broadcastId);
+  if (typeof broadcastId !== "string") {
+    res.status(400).send("BroadcastId must be a string");
+    return;
+  }
+  if (broadcastEntities.entities[broadcastId] === undefined) {
+    console.log(broadcastEntities.ids);
+    res.status(404).send("Broadcast not found");
+    return;
+  }
+  const broadcast = broadcastEntities.entities[broadcastId];
+  res.status(200).send(broadcast);
 });
 
 app.listen(PORT, () => {
