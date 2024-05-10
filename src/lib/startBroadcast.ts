@@ -5,6 +5,7 @@ import {
   updateBroadcastStatus,
 } from "./broadcasts";
 import { Broadcast } from "./utils/Broadcast";
+import { broadCastConfigEntities } from "./broadcasterConfigs";
 const XMTP_RATE_LIMIT = 1000;
 const XMTP_RATE_LIMIT_TIME = 60 * 1000; // 1 minute
 const XMTP_RATE_LIMIT_TIME_INCREASE = XMTP_RATE_LIMIT_TIME * 5; // 5 minutes
@@ -56,12 +57,18 @@ export const startBroadcast = async (
   errorCount = 0;
   sendCount = 0;
   startTime = Date.now();
+  const broadcastConfigId = broadCastConfigEntities.map[client.address].id;
   const broadcast = new Broadcast({
     client,
     addresses: broadcastAddresses,
     cachedCanMessageAddresses: [],
-    rateLimitAmount: XMTP_RATE_LIMIT,
-    rateLimitTime: XMTP_RATE_LIMIT_TIME_INCREASE,
+    rateLimitAmount: Number(
+      process.env[`${broadcastConfigId}_RATE_LIMIT_AMOUNT`] ?? XMTP_RATE_LIMIT
+    ),
+    rateLimitTime: Number(
+      process.env[`${broadcastConfigId}_RATE_LIMIT_DURATION`] ??
+        XMTP_RATE_LIMIT_TIME_INCREASE
+    ),
     onBatchStart,
     onBatchComplete,
     onBroadcastComplete,

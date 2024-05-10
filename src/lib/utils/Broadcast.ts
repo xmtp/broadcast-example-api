@@ -19,6 +19,8 @@ interface BroadcastOptions {
   onDelay?: (ms: number) => void;
 }
 
+const GENERAL_RATE_LIMIT = 10000;
+
 export class Broadcast {
   client: Client;
   addresses: string[];
@@ -78,7 +80,9 @@ export class Broadcast {
       this.conversationMapping.set(conversation.peerAddress, conversation);
     }
     console.log("delaying after list");
-    await this.delay(this.rateLimitTime);
+    if (conversations.length / 2 > GENERAL_RATE_LIMIT - this.rateLimitAmount) {
+      await this.delay(this.rateLimitTime);
+    }
 
     this.batches = this.getBatches();
     for (let batchIndex = 0; batchIndex < this.batches.length; batchIndex++) {
@@ -187,7 +191,8 @@ export class Broadcast {
       if (!this.conversationMapping.has(this.addresses[i])) {
         batchCount++;
       }
-      if (batchCount >= this.rateLimitAmount / 2) {
+      //       if (batchCount >= this.rateLimitAmount / 2) { keeping this commented for now, will uncomment/remove after testing
+      if (batchCount >= this.rateLimitAmount) {
         batches.push(batch);
         batch = [];
         batchCount = 0;
