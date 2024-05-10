@@ -112,7 +112,7 @@ app.post("/broadcast", async (req: Request, res: Response) => {
     return;
   }
   const subscribers = getDevWalletAddresses();
-  const broadcastId = addBroadcast(subscribers, text);
+  const broadcastId = addBroadcast(client.address, subscribers, text);
   startBroadcast(client, subscribers, text, broadcastId);
 
   res.status(200).send({ broadcastId });

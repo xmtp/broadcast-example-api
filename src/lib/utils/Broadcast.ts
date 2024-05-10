@@ -185,14 +185,20 @@ export class Broadcast {
     let batch: string[] = [];
     const batches: string[][] = [];
     let batchCount = 0;
-    for (let i = 0; i < this.addresses.length; i++) {
+    for (const address of this.addresses) {
+      // No matter what we will want to send a message so this is 1 count
+      // If sending multiple messages like a broadcast with text and image will need to add more
       batchCount++;
-      batch.push(this.addresses[i]);
-      if (!this.conversationMapping.has(this.addresses[i])) {
-        batchCount++;
+      batch.push(address);
+      if (!this.conversationMapping.has(address)) {
+        // this conversation will likely need to be created
+        // so we count it as 2
+        // 1 for getUserContactFromNetwork
+        // 1 for post to network
+        batchCount += 2;
       }
       //       if (batchCount >= this.rateLimitAmount / 2) { keeping this commented for now, will uncomment/remove after testing
-      if (batchCount >= this.rateLimitAmount) {
+      if (batchCount >= this.rateLimitAmount / 2) {
         batches.push(batch);
         batch = [];
         batchCount = 0;

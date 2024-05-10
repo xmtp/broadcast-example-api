@@ -1,5 +1,6 @@
 interface Broadcast {
   id: string;
+  address: string;
   message: string;
   recipients: number;
   sent: number;
@@ -27,11 +28,16 @@ function uuidv4() {
   );
 }
 
-export const addBroadcast = (recipients: string[], message: string): string => {
+export const addBroadcast = (
+  broadcastAddress: string,
+  recipients: string[],
+  message: string
+): string => {
   const id = uuidv4();
 
   const broadcast: Broadcast = {
     id,
+    address: broadcastAddress,
     message,
     recipients: recipients.length,
     sent: 0,
