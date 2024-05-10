@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "tsx --env-file=.env ./src/index.ts",
-    "dev": "tsx watch --env-file=.env ./src/index.ts"
+    "dev": "tsx watch --env-file=.env ./src/index.ts",
+    "start-redis": "docker-compose up -d"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
