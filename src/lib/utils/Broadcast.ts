@@ -122,14 +122,16 @@ export class Broadcast {
         for (const message of this.messages) {
           await conversation.send(message);
         }
+        this.onMessageSent?.(address);
+        // Clear up some memory after we are done with the conversation
+        this.cachedCanMessageAddresses.delete(address);
+        this.conversationMapping.delete(address);
       })
     );
     for (let i = 0; i < settledResponses.length; i++) {
       const response = settledResponses[i];
       const address = addresses[i];
-      if (response.status === "fulfilled") {
-        this.onMessageSent?.(address);
-      } else {
+      if (response.status === "rejected") {
         this.onMessageFailed?.(address);
         this.errorBatch.push(address);
         await this.delay(this.rateLimitTime);
