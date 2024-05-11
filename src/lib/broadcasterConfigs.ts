@@ -31,6 +31,16 @@ const broadcastConfigs: BroadcastConfig[] = [
       "You've subscribed during the weekly wrapup, we will now send you weekly updates on the XMTP roadmap",
     id: "WRAPUP",
   },
+  {
+    address: "0x4F44eE3011E1e82D1DBcce6dBDE140ba4818ad35",
+    greeting: "You've subscribed during to Broadcast Test 1",
+    id: "BROADCAST_TEST_1",
+  },
+  {
+    address: "0x2E2252AB27c8D71B1Bf550adC24e3C1D1297b7eA",
+    greeting: "You've subscribed during to Broadcast Test 2",
+    id: "BROADCAST_TEST_2",
+  },
 ];
 
 interface BroadcastConfigEntities {

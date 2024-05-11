@@ -110,12 +110,8 @@ export class Broadcast {
   private handleBatch = async ({ addresses }: { addresses: string[] }) => {
     this.onBatchStart?.(addresses);
     await this.canMessageAddresses(addresses, this.onCanMessageAddressesUpdate);
-    for (const address of addresses) {
-      if (!this.cachedCanMessageAddresses.has(address)) {
-        this.onCantMessageAddress?.(address);
-        continue;
-      }
-      try {
+    const settledResponses = await Promise.allSettled(
+      addresses.map(async (address) => {
         let conversation = this.conversationMapping.get(address);
         if (!conversation) {
           conversation = await this.client.conversations.newConversation(
@@ -126,8 +122,14 @@ export class Broadcast {
         for (const message of this.messages) {
           await conversation.send(message);
         }
+      })
+    );
+    for (let i = 0; i < settledResponses.length; i++) {
+      const response = settledResponses[i];
+      const address = addresses[i];
+      if (response.status === "fulfilled") {
         this.onMessageSent?.(address);
-      } catch (err) {
+      } else {
         this.onMessageFailed?.(address);
         this.errorBatch.push(address);
         await this.delay(this.rateLimitTime);
