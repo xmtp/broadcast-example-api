@@ -18,6 +18,7 @@ interface BroadcastOptions {
   onBroadcastComplete?: () => void;
   onCantMessageAddress?: (address: string) => void;
   onCanMessageAddreses?: (addresses: string[]) => void;
+  onMessageSending?: (address: string) => void;
   onMessageFailed?: (address: string) => void;
   onMessageSent?: (address: string) => void;
   onCanMessageAddressesUpdate?: (addresses: string[]) => void;
@@ -43,6 +44,7 @@ export class Broadcast {
   onBroadcastComplete?: () => void;
   onCantMessageAddress?: (address: string) => void;
   onCanMessageAddreses?: (addresses: string[]) => void;
+  onMessageSending?: (address: string) => void;
   onMessageFailed?: (address: string) => void;
   onMessageSent?: (address: string) => void;
   onCanMessageAddressesUpdate?: (addresses: string[]) => void;
@@ -60,6 +62,7 @@ export class Broadcast {
     onBroadcastComplete,
     onCantMessageAddress,
     onCanMessageAddreses,
+    onMessageSending,
     onMessageFailed,
     onMessageSent,
     onCanMessageAddressesUpdate,
@@ -76,6 +79,7 @@ export class Broadcast {
     this.onBroadcastComplete = onBroadcastComplete;
     this.onCantMessageAddress = onCantMessageAddress;
     this.onCanMessageAddreses = onCanMessageAddreses;
+    this.onMessageSending = onMessageSending;
     this.onMessageFailed = onMessageFailed;
     this.onMessageSent = onMessageSent;
     this.onCanMessageAddressesUpdate = onCanMessageAddressesUpdate;
@@ -110,8 +114,12 @@ export class Broadcast {
   private handleBatch = async ({ addresses }: { addresses: string[] }) => {
     this.onBatchStart?.(addresses);
     await this.canMessageAddresses(addresses, this.onCanMessageAddressesUpdate);
-    const settledResponses = await Promise.allSettled(
-      addresses.map(async (address) => {
+    for (const address of addresses) {
+      if (!this.cachedCanMessageAddresses.has(address)) {
+        this.onCantMessageAddress?.(address);
+        continue;
+      }
+      try {
         let conversation = this.conversationMapping.get(address);
         if (!conversation) {
           conversation = await this.client.conversations.newConversation(
@@ -119,6 +127,7 @@ export class Broadcast {
           );
           this.conversationMapping.set(address, conversation);
         }
+
         for (const message of this.messages) {
           await conversation.send(message);
         }
@@ -126,12 +135,7 @@ export class Broadcast {
         // Clear up some memory after we are done with the conversation
         this.cachedCanMessageAddresses.delete(address);
         this.conversationMapping.delete(address);
-      })
-    );
-    for (let i = 0; i < settledResponses.length; i++) {
-      const response = settledResponses[i];
-      const address = addresses[i];
-      if (response.status === "rejected") {
+      } catch (err) {
         this.onMessageFailed?.(address);
         this.errorBatch.push(address);
         await this.delay(this.rateLimitTime);
@@ -144,7 +148,7 @@ export class Broadcast {
     if (this.errorBatch.length === 0) {
       return;
     }
-    const finalErrors = [];
+    const finalErrors: string[] = [];
     for (const address of this.errorBatch) {
       try {
         const conversation = await this.client.conversations.newConversation(
@@ -206,6 +210,8 @@ export class Broadcast {
         // 2. create peer invite
         // 3. allow contact
         addressWeight += 3;
+      } else {
+        addressWeight += 1;
       }
       const newBatchCount = batchCount + addressWeight;
       if (newBatchCount === this.rateLimitAmount) {

@@ -26,6 +26,9 @@ export const startBroadcast = async (
     );
     finishBroadcast(broadcastId);
   };
+  const onMessageSending = (address: string) => {
+    console.log(`Sending message to address ${address}`);
+  };
   const onMessageFailed = (address: string) => {
     errorCount++;
     console.log(`Message failed for address ${errorCount} : ${address}`);
@@ -73,6 +76,7 @@ export const startBroadcast = async (
     onBatchStart,
     onBatchComplete,
     onBroadcastComplete,
+    onMessageSending,
     onCantMessageAddress,
     onCanMessageAddreses,
     onMessageFailed,
